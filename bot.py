@@ -9,6 +9,7 @@ BOT_TOKEN = os.getenv("BOT_TOKEN")
 VCPEPU = "0x2e709a0771203c3e7ac6bcc86c38557345e8164c"
 VCPX = "0x9f8cd6824f758c7b2f34cc8a58493e0a66089e51"
 GECKO_SIMPLE = "https://api.geckoterminal.com/api/v2/simple/networks/pepe-unchained/token_price/0x2e709a0771203c3e7ac6bcc86c38557345e8164c%2C0x9f8cd6824f758c7b2f34cc8a58493e0a66089e51?include_market_cap=true&mcap_fdv_fallback=true&include_24hr_vol=true&include_24hr_price_change=true"
+PEPUSCAN_TOKENS_API = "https://pepuscan.com/api?module=account&action=tokenlist&address="
 update_chat_id = 527577871
 
 async def price(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -47,22 +48,22 @@ async def wallet(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not context.args:
         return await update.message.reply_text("⚠️ Usage: /wallet <0x...>")
     address = context.args[0].lower()
-    url = f"https://explorer-pepu-v2-mainnet-0.t.conduit.xyz/api/v2/addresses/{address}/token-balances"
+    url = f"{PEPUSCAN_TOKENS_API}{address}"
     try:
         async with httpx.AsyncClient(verify=False) as client:
             r = await client.get(url)
             r.raise_for_status()
-            balances = r.json()
+            tokens = r.json().get("result", [])
 
-        filtered_tokens = [t for t in balances if t.get("token", {}).get("contract_address", "").lower() in [VCPEPU.lower(), VCPX.lower()]]
-
-        for token in filtered_tokens:
-            token_name = "VCPEPU" if token["token"]["contract_address"].lower() == VCPEPU.lower() else "VCPX"
-            amount = float(token.get("balance", "0")) / 1e18
-            short = address[:6] + "..." + address[-4:]
-            await update.message.reply_text(
-                f"👛 Wallet Check\nToken ¦ {token_name}\nAddress ¦ {short}\nBalance ¦ {amount:,.2f}"
-            )
+        for token in tokens:
+            contract = token.get("contractAddress", "").lower()
+            if contract in [VCPEPU.lower(), VCPX.lower()]:
+                symbol = token.get("symbol", "?")
+                balance = int(token.get("balance", "0")) / (10 ** int(token.get("decimals", "18")))
+                short = address[:6] + "..." + address[-4:]
+                await update.message.reply_text(
+                    f"👛 Wallet Check\nToken ¦ {symbol}\nAddress ¦ {short}\nBalance ¦ {balance:,.2f}"
+                )
 
     except Exception as e:
         await update.message.reply_text(f"❌ Error fetching wallet: {e}")
