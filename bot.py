@@ -9,13 +9,81 @@ from telegram.constants import ParseMode
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 POOL_API_VCPEPU = "https://api.geckoterminal.com/api/v2/networks/pepe-unchained/pools/0xfac9ffcf6a71c07f1b1fcf678270c8a3bdc30dba/trades"
 POOL_API_VCPX = "https://api.geckoterminal.com/api/v2/networks/pepe-unchained/pools/0x9f8cd6824f758c7b2f34cc8a58493e0a66089e51/trades"
+GECKO_API = "https://api.geckoterminal.com/api/v2/networks/pepe-unchained/pools/0xfac9ffcf6a71c07f1b1fcf678270c8a3bdc30dba"
 EXPLORER_API = "https://explorer-pepu-v2-mainnet-0.t.conduit.xyz/api/v2"
-TOKEN_NAME = "VCPEPU"
-TOKEN_ADDRESS = "0x2e709a0771203c3e7ac6bcc86c38557345e8164c"
-TOKEN_VCPX_ADDRESS = "0x9f8cd6824f758c7b2f34cc8a58493e0a66089e51"
+TOKEN_VCPEPU = "0x2e709a0771203c3e7ac6bcc86c38557345e8164c"
+TOKEN_VCPX = "0x9f8cd6824f758c7b2f34cc8a58493e0a66089e51"
 update_chat_id = 527577871
 LAST_VCPEPU_TX = None
 LAST_VCPX_TX = None
+
+async def price(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    r = httpx.get(GECKO_API, verify=certifi.where()).json()
+    a = r["data"]["attributes"]
+    usd = a["base_token_price_usd"][:11]
+    wpepu = a["quote_token_price_native_currency"][:8]
+    await update.message.reply_text(f"💱 VCPEPU Price\nUSD ¦ {usd}\nWPEPU ¦ {wpepu}")
+
+async def ca(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.message.reply_text(f"🔗 Contract\nVCPEPU ¦ {TOKEN_VCPEPU}\nVCPX ¦ {TOKEN_VCPX}")
+
+async def mcap(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    r = httpx.get(GECKO_API, verify=certifi.where()).json()
+    fdv = float(r["data"]["attributes"]["fdv_usd"])
+    await update.message.reply_text(f"📊 FDV (Market Cap)\nUSD ¦ ${fdv:,.2f}")
+
+async def info(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    async with httpx.AsyncClient(verify=certifi.where()) as client:
+        vcpepu_info = await client.get(f"{EXPLORER_API}/tokens/{TOKEN_VCPEPU}")
+        vcpx_info = await client.get(f"{EXPLORER_API}/tokens/{TOKEN_VCPX}")
+        vcpepu_holders = await client.get(f"{EXPLORER_API}/tokens/{TOKEN_VCPEPU}/holders")
+        vcpx_holders = await client.get(f"{EXPLORER_API}/tokens/{TOKEN_VCPX}/holders")
+
+    vcpepu_price = float(vcpepu_info.json().get("price_usd", 0))
+    vcpx_price = float(vcpx_info.json().get("price_usd", 0))
+    vcpepu_count = vcpepu_holders.json().get("totalItems", "?")
+    vcpx_count = vcpx_holders.json().get("totalItems", "?")
+
+    await update.message.reply_text(
+        f"ℹ️ Token Info\n"
+        f"VCPEPU ¦ ${vcpepu_price:.8f} ¦ Holders: {vcpepu_count}\n"
+        f"VCPX   ¦ ${vcpx_price:.8f} ¦ Holders: {vcpx_count}"
+    )
+
+async def wallet(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if not context.args:
+        return await update.message.reply_text("⚠️ Usage: /wallet <0x...>")
+    address = context.args[0].lower()
+    url = f"{EXPLORER_API}/addresses/{address}/token-balances"
+    try:
+        async with httpx.AsyncClient(verify=certifi.where()) as client:
+            r = await client.get(url)
+            r.raise_for_status()
+            data = r.json()
+            balances = data.get("items", [])
+            vcp = next((x for x in balances if x.get("token", {}).get("contract_address", "").lower() == TOKEN_VCPEPU.lower()), None)
+            vpx = next((x for x in balances if x.get("token", {}).get("contract_address", "").lower() == TOKEN_VCPX.lower()), None)
+            raw1 = int(vcp.get("balance", 0)) / 1e18 if vcp else 0
+            raw2 = int(vpx.get("balance", 0)) / 1e18 if vpx else 0
+            short = address[:6] + "..." + address[-4:]
+            await update.message.reply_text(
+                f"👛 Wallet Check\nAddress ¦ {short}\nVCPEPU ¦ {raw1:,.2f}\nVCPX ¦ {raw2:,.2f}"
+            )
+    except Exception as e:
+        await update.message.reply_text(f"❌ Error fetching wallet data: {e}")
+
+async def chapter(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    r = httpx.get(GECKO_API, verify=certifi.where()).json()
+    fdv = float(r["data"]["attributes"]["fdv_usd"])
+    unlocked = int(fdv // 10000) + 1
+    unlocked = min(unlocked, 15)
+    out = "📘 Unlocked Chapters\n\n"
+    for i in range(1, 16):
+        if i <= unlocked:
+            out += f"✅ C{i} ¦ "
+        else:
+            out += f"❌ C{i} ¦ "
+    await update.message.reply_text(out.rstrip(" ¦ "))
 
 async def monitor_buys(app):
     global LAST_VCPEPU_TX, LAST_VCPX_TX
@@ -31,7 +99,7 @@ async def monitor_buys(app):
                 if not data:
                     continue
                 latest = data[0]
-                tx_hash = latest["attributes"]["transaction_hash"]
+                tx_hash = latest["id"]
                 amount_usd = float(latest["attributes"].get("amount_in_usd", 0))
                 if latest["attributes"].get("trade_type") != "buy" or amount_usd < 1:
                     continue
@@ -87,7 +155,12 @@ app = (
     .build()
 )
 
-app.add_handler(CommandHandler("price", lambda u, c: None))  # Platzhalter für spätere Befehle
+app.add_handler(CommandHandler("price", price))
+app.add_handler(CommandHandler("ca", ca))
+app.add_handler(CommandHandler("mcap", mcap))
+app.add_handler(CommandHandler("info", info))
+app.add_handler(CommandHandler("wallet", wallet))
+app.add_handler(CommandHandler("chapter", chapter))
 
 if __name__ == "__main__":
     print("Bot is polling...")
