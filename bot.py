@@ -46,20 +46,21 @@ async def wallet(update: Update, context: ContextTypes.DEFAULT_TYPE):
     address = context.args[0].lower()
     url = f"{EXPLORER_API}/addresses/{address}/token-balances"
     try:
-        r = httpx.get(url, verify=certifi.where())
-        r.raise_for_status()
-        data = r.json()
-        balances = data.get("items", [])
-        match = next((x for x in balances if x.get("token", {}).get("contract_address", "").lower() == TOKEN_ADDRESS.lower()), None)
-        if match:
-            raw = int(match.get("balance", "0"))
-            amount = raw / 1e18
-            short = address[:6] + "..." + address[-4:]
-            await update.message.reply_text(
-                f"👛 Wallet Check\nAddress ¦ {short}\n{TOKEN_NAME} ¦ {amount:,.4f}"
-            )
-        else:
-            await update.message.reply_text(f"{TOKEN_NAME} not found in wallet.")
+        async with httpx.AsyncClient(verify=certifi.where()) as client:
+            r = await client.get(url)
+            r.raise_for_status()
+            data = r.json()
+            balances = data.get("items", [])
+            match = next((x for x in balances if x.get("token", {}).get("contract_address", "").lower() == TOKEN_ADDRESS.lower()), None)
+            if match:
+                raw = int(match.get("balance", "0"))
+                amount = raw / 1e18
+                short = address[:6] + "..." + address[-4:]
+                await update.message.reply_text(
+                    f"👛 Wallet Check\nAddress ¦ {short}\n{TOKEN_NAME} ¦ {amount:,.4f}"
+                )
+            else:
+                await update.message.reply_text(f"{TOKEN_NAME} not found in wallet.")
     except Exception as e:
         await update.message.reply_text(f"❌ Error fetching wallet data: {e}")
 
