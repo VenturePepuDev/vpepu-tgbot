@@ -22,32 +22,14 @@ async def price(update: Update, context: ContextTypes.DEFAULT_TYPE):
     a = r["data"]["attributes"]
     usd = a["base_token_price_usd"][:11]
     wpepu = a["quote_token_price_native_currency"][:8]
-    await update.message.reply_text(f"💱 VCPEPU Price\nUSD ¦ {usd}\nWPEPU ¦ {wpepu}")
-
-async def ca(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text(f"🔗 Contract\nVCPEPU ¦ {TOKEN_VCPEPU}\nVCPX ¦ {TOKEN_VCPX}")
-
-async def mcap(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    r = httpx.get(GECKO_API, verify=certifi.where()).json()
-    fdv = float(r["data"]["attributes"]["fdv_usd"])
-    await update.message.reply_text(f"📊 FDV (Market Cap)\nUSD ¦ ${fdv:,.2f}")
-
-async def info(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    async with httpx.AsyncClient(verify=certifi.where()) as client:
-        vcpepu_info = await client.get(f"{EXPLORER_API}/tokens/{TOKEN_VCPEPU}")
-        vcpx_info = await client.get(f"{EXPLORER_API}/tokens/{TOKEN_VCPX}")
-        vcpepu_holders = await client.get(f"{EXPLORER_API}/tokens/{TOKEN_VCPEPU}/holders")
-        vcpx_holders = await client.get(f"{EXPLORER_API}/tokens/{TOKEN_VCPX}/holders")
-
-    vcpepu_price = float(vcpepu_info.json().get("price_usd", 0))
-    vcpx_price = float(vcpx_info.json().get("price_usd", 0))
-    vcpepu_count = vcpepu_holders.json().get("totalItems", "?")
-    vcpx_count = vcpx_holders.json().get("totalItems", "?")
-
+    change = a.get("price_change_percentage", {}).get("h24")
+    if change:
+        change = float(change)
+        change_fmt = f"{change:+.2f}%"
+    else:
+        change_fmt = "?"
     await update.message.reply_text(
-        f"ℹ️ Token Info\n"
-        f"VCPEPU ¦ ${vcpepu_price:.8f} ¦ Holders: {vcpepu_count}\n"
-        f"VCPX   ¦ ${vcpx_price:.8f} ¦ Holders: {vcpx_count}"
+        f"💱 VCPEPU Price\nUSD ¦ ${usd}\nWPEPU ¦ {wpepu}\n24h Change ¦ {change_fmt}"
     )
 
 async def wallet(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -56,7 +38,7 @@ async def wallet(update: Update, context: ContextTypes.DEFAULT_TYPE):
     address = context.args[0].lower()
     url = f"{EXPLORER_API}/addresses/{address}/token-balances"
     try:
-        async with httpx.AsyncClient(verify=certifi.where()) as client:
+        async with httpx.AsyncClient(verify=False) as client:
             r = await client.get(url)
             r.raise_for_status()
             data = r.json()
@@ -71,6 +53,35 @@ async def wallet(update: Update, context: ContextTypes.DEFAULT_TYPE):
             )
     except Exception as e:
         await update.message.reply_text(f"❌ Error fetching wallet data: {e}")
+
+async def info(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    try:
+        async with httpx.AsyncClient(verify=False) as client:
+            vcpepu_info = await client.get(f"{EXPLORER_API}/tokens/{TOKEN_VCPEPU}")
+            vcpx_info = await client.get(f"{EXPLORER_API}/tokens/{TOKEN_VCPX}")
+            vcpepu_holders = await client.get(f"{EXPLORER_API}/tokens/{TOKEN_VCPEPU}/holders")
+            vcpx_holders = await client.get(f"{EXPLORER_API}/tokens/{TOKEN_VCPX}/holders")
+
+        vcpepu_price = float(vcpepu_info.json().get("price_usd", 0))
+        vcpx_price = float(vcpx_info.json().get("price_usd", 0))
+        vcpepu_count = vcpepu_holders.json().get("totalItems", "?")
+        vcpx_count = vcpx_holders.json().get("totalItems", "?")
+
+        await update.message.reply_text(
+            f"ℹ️ Token Info\n"
+            f"VCPEPU ¦ ${vcpepu_price:.8f} ¦ Holders: {vcpepu_count}\n"
+            f"VCPX   ¦ ${vcpx_price:.8f} ¦ Holders: {vcpx_count}"
+        )
+    except Exception as e:
+        await update.message.reply_text(f"❌ Error fetching token info: {e}")
+
+async def mcap(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    r = httpx.get(GECKO_API, verify=certifi.where()).json()
+    fdv = float(r["data"]["attributes"]["fdv_usd"])
+    await update.message.reply_text(f"📊 FDV (Market Cap)\nUSD ¦ ${fdv:,.2f}")
+
+async def ca(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.message.reply_text(f"🔗 Contract\nVCPEPU ¦ {TOKEN_VCPEPU}\nVCPX ¦ {TOKEN_VCPX}")
 
 async def chapter(update: Update, context: ContextTypes.DEFAULT_TYPE):
     r = httpx.get(GECKO_API, verify=certifi.where()).json()
@@ -147,7 +158,6 @@ async def monitor_buys(app):
 async def on_startup(app):
     asyncio.create_task(monitor_buys(app))
 
-# Init bot
 app = (
     ApplicationBuilder()
     .token(BOT_TOKEN)
@@ -156,10 +166,10 @@ app = (
 )
 
 app.add_handler(CommandHandler("price", price))
-app.add_handler(CommandHandler("ca", ca))
-app.add_handler(CommandHandler("mcap", mcap))
-app.add_handler(CommandHandler("info", info))
 app.add_handler(CommandHandler("wallet", wallet))
+app.add_handler(CommandHandler("info", info))
+app.add_handler(CommandHandler("mcap", mcap))
+app.add_handler(CommandHandler("ca", ca))
 app.add_handler(CommandHandler("chapter", chapter))
 
 if __name__ == "__main__":
