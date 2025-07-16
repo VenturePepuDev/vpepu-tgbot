@@ -12,6 +12,11 @@ GECKO_SIMPLE = "https://api.geckoterminal.com/api/v2/simple/networks/pepe-unchai
 PEPUSCAN_TOKENS_API = "https://pepuscan.com/api?module=account&action=tokenlist&address="
 update_chat_id = 527577871
 
+GECKO_LINKS = {
+    "VCPEPU": "https://www.geckoterminal.com/pepe-unchained/pools/0xfac9ffcf6a71c07f1b1fcf678270c8a3bdc30dba",
+    "VCPX": "https://www.geckoterminal.com/pepe-unchained/pools/0xba7fe75b9f2587397bb279a646e5b0a19adb6a1a"
+}
+
 async def price(update: Update, context: ContextTypes.DEFAULT_TYPE):
     try:
         r = httpx.get(GECKO_SIMPLE).json()
@@ -32,14 +37,16 @@ async def price(update: Update, context: ContextTypes.DEFAULT_TYPE):
             vol = float(volumes.get(addr, 0))
             change = float(changes.get(addr, 0))
 
-            msg = (
-                f"💱 {name} Price\n"
-                f"USD ¦ ${price:.9f}\n"
-                f"FDV ¦ ${fdv:.2f}\n"
-                f"Vol 24h ¦ ${vol:.2f}\n"
-                f"24h Change ¦ {change:.2f}%"
+            block = (
+                f"```\n{name}\n"
+                f"USD:        ${price:.9f}\n"
+                f"FDV:        ${fdv:,.2f}\n"
+                f"Vol (24h):  ${vol:,.2f}\n"
+                f"Change:     {change:.2f}%\n```"
             )
-            await update.message.reply_text(msg)
+            links = f"[Geckoterminal]({GECKO_LINKS[name]}) | [Pepuswap](https://www.pepuswap.com) | [Explorer](https://www.pepuscan.com)"
+            await update.message.reply_text(block, parse_mode=ParseMode.MARKDOWN)
+            await update.message.reply_text(links, parse_mode=ParseMode.MARKDOWN)
 
     except Exception as e:
         await update.message.reply_text(f"❌ Error fetching price: {e}")
@@ -61,25 +68,32 @@ async def wallet(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 symbol = token.get("symbol", "?")
                 balance = int(token.get("balance", "0")) / (10 ** int(token.get("decimals", "18")))
                 short = address[:6] + "..." + address[-4:]
-                await update.message.reply_text(
-                    f"👛 Wallet Check\nToken ¦ {symbol}\nAddress ¦ {short}\nBalance ¦ {balance:,.2f}"
+                msg = (
+                    f"```\nWallet Check\nToken:     {symbol}\nAddress:   {short}\nBalance:   {balance:,.2f}\n```"
                 )
+                await update.message.reply_text(msg, parse_mode=ParseMode.MARKDOWN)
 
     except Exception as e:
         await update.message.reply_text(f"❌ Error fetching wallet: {e}")
 
 async def ca(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text(f"🔗 Contract\nVCPEPU ¦ {VCPEPU}\nVCPX ¦ {VCPX}")
+    msg = (
+        f"```\nVCPEPU Contract\n{VCPEPU}\n```\n"
+        f"[Link](https://pepuscan.com/address/{VCPEPU})\n\n"
+        f"```\nVCPX Contract\n{VCPX}\n```\n"
+        f"[Link](https://pepuscan.com/address/{VCPX})"
+    )
+    await update.message.reply_text(msg, parse_mode=ParseMode.MARKDOWN)
 
 async def chapter(update: Update, context: ContextTypes.DEFAULT_TYPE):
     try:
         r = httpx.get("https://api.geckoterminal.com/api/v2/networks/pepe-unchained/pools/0xfac9ffcf6a71c07f1b1fcf678270c8a3bdc30dba").json()
         fdv = float(r["data"]["attributes"]["fdv_usd"])
         unlocked = min(int(fdv // 10000) + 1, 15)
-        out = "📘 Unlocked Chapters\n\n"
+        row = ""
         for i in range(1, 16):
-            out += f"{'✅' if i <= unlocked else '❌'} C{i} ¦ "
-        await update.message.reply_text(out.rstrip(" ¦ "))
+            row += f"{'✅' if i <= unlocked else '❌'} C{i}  "
+        await update.message.reply_text(f"```\nUnlocked Chapters\n{row}```", parse_mode=ParseMode.MARKDOWN)
     except Exception as e:
         await update.message.reply_text(f"❌ Error: {e}")
 
