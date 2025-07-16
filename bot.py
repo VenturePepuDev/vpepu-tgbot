@@ -86,10 +86,10 @@ async def wallet(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def ca(update: Update, context: ContextTypes.DEFAULT_TYPE):
     msg = (
-        f"```\nVCPEPU Contract\n{VCPEPU}\n```
-[Explorer](https://pepuscan.com/address/{VCPEPU})\n\n"
-        f"```\nVCPX Contract\n{VCPX}\n```
-[Explorer](https://pepuscan.com/address/{VCPX})"
+        f"```\nVCPEPU Contract\n{VCPEPU}\n```\n"
+        f"[Explorer](https://pepuscan.com/address/{VCPEPU})\n\n"
+        f"```\nVCPX Contract\n{VCPX}\n```\n"
+        f"[Explorer](https://pepuscan.com/address/{VCPX})"
     )
     await update.message.reply_text(msg, parse_mode=ParseMode.MARKDOWN)
 
