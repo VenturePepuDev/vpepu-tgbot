@@ -81,10 +81,12 @@ async def wallet(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def ca(update: Update, context: ContextTypes.DEFAULT_TYPE):
     try:
         msg = (
-            f"🔗 *VCPEPU Contract*\n`
-{VCPEPU}`\n[Explorer](https://pepuscan.com/address/{VCPEPU})\n\n"
-            f"🔗 *VCPX Contract*\n`
-{VCPX}`\n[Explorer](https://pepuscan.com/address/{VCPX})"
+            f"🔗 *VCPEPU Contract*\n"
+            f"`{VCPEPU}`\n"
+            f"[Explorer](https://pepuscan.com/address/{VCPEPU})\n\n"
+            f"🔗 *VCPX Contract*\n"
+            f"`{VCPX}`\n"
+            f"[Explorer](https://pepuscan.com/address/{VCPX})"
         )
         await update.message.reply_text(msg, parse_mode=ParseMode.MARKDOWN)
     except Exception as e:
