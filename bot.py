@@ -10,8 +10,6 @@ VCPEPU = "0x2e709a0771203c3e7ac6bcc86c38557345e8164c"
 VCPX = "0x9f8cd6824f758c7b2f34cc8a58493e0a66089e51"
 GECKO_SIMPLE = "https://api.geckoterminal.com/api/v2/simple/networks/pepe-unchained/token_price/0x2e709a0771203c3e7ac6bcc86c38557345e8164c%2C0x9f8cd6824f758c7b2f34cc8a58493e0a66089e51?include_market_cap=true&mcap_fdv_fallback=true&include_24hr_vol=true&include_24hr_price_change=true"
 PEPUSCAN_TOKENS_API = "https://pepuscan.com/api?module=account&action=tokenlist&address="
-update_chat_id = 527577871
-
 GECKO_LINKS = {
     "VCPEPU": "https://www.geckoterminal.com/pepe-unchained/pools/0xfac9ffcf6a71c07f1b1fcf678270c8a3bdc30dba",
     "VCPX": "https://www.geckoterminal.com/pepe-unchained/pools/0xba7fe75b9f2587397bb279a646e5b0a19adb6a1a"
@@ -37,20 +35,17 @@ async def price(update: Update, context: ContextTypes.DEFAULT_TYPE):
             vol = float(volumes.get(addr, 0))
             change = float(changes.get(addr, 0))
 
-            block = (
-                f"```\n┌──── {name} Price ────┐\n"
-                f"│ USD:        ${price:.9f}\n"
-                f"│ Marketcap:  ${mcap:,.2f}\n"
-                f"│ Vol (24h):  ${vol:,.2f}\n"
-                f"│ Change:     {change:.2f}%\n"
-                f"└─────────────────────┘\n```"
-            )
-            links = (
+            msg = (
+                f"📊 *{name} Price*\n"
+                f"USD:        `${price:.9f}`\n"
+                f"Marketcap:  `${mcap:,.2f}`\n"
+                f"Vol (24h):  `${vol:,.2f}`\n"
+                f"Change:     `{change:.2f}%`\n\n"
                 f"[Geckoterminal]({GECKO_LINKS[name]}) | "
                 f"[Pepuswap](https://www.pepuswap.com/) | "
                 f"[Explorer](https://www.pepuscan.com/)"
             )
-            await update.message.reply_text(block + "\n" + links, parse_mode=ParseMode.MARKDOWN)
+            await update.message.reply_text(msg, parse_mode=ParseMode.MARKDOWN)
 
     except Exception as e:
         await update.message.reply_text(f"❌ Error fetching price: {e}")
@@ -73,11 +68,10 @@ async def wallet(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 balance = int(token.get("balance", "0")) / (10 ** int(token.get("decimals", "18")))
                 short = address[:6] + "..." + address[-4:]
                 msg = (
-                    f"```\n┌── Wallet Check ──┐\n"
-                    f"│ Token:   {symbol}\n"
-                    f"│ Address: {short}\n"
-                    f"│ Balance: {balance:,.2f}\n"
-                    f"└──────────────────┘\n```"
+                    f"💰 *Wallet Check*\n"
+                    f"Token:   `{symbol}`\n"
+                    f"Address: `{short}`\n"
+                    f"Balance: `{balance:,.2f}`"
                 )
                 await update.message.reply_text(msg, parse_mode=ParseMode.MARKDOWN)
 
@@ -85,13 +79,16 @@ async def wallet(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text(f"❌ Error fetching wallet: {e}")
 
 async def ca(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    msg = (
-        f"```\nVCPEPU Contract\n{VCPEPU}\n```\n"
-        f"[Explorer](https://pepuscan.com/address/{VCPEPU})\n\n"
-        f"```\nVCPX Contract\n{VCPX}\n```\n"
-        f"[Explorer](https://pepuscan.com/address/{VCPX})"
-    )
-    await update.message.reply_text(msg, parse_mode=ParseMode.MARKDOWN)
+    try:
+        msg = (
+            f"🔗 *VCPEPU Contract*\n`
+{VCPEPU}`\n[Explorer](https://pepuscan.com/address/{VCPEPU})\n\n"
+            f"🔗 *VCPX Contract*\n`
+{VCPX}`\n[Explorer](https://pepuscan.com/address/{VCPX})"
+        )
+        await update.message.reply_text(msg, parse_mode=ParseMode.MARKDOWN)
+    except Exception as e:
+        await update.message.reply_text(f"❌ Error: {e}")
 
 async def chapter(update: Update, context: ContextTypes.DEFAULT_TYPE):
     try:
@@ -101,7 +98,7 @@ async def chapter(update: Update, context: ContextTypes.DEFAULT_TYPE):
         row = ""
         for i in range(1, 16):
             row += f"{'✅' if i <= unlocked else '❌'} C{i}  "
-        await update.message.reply_text(f"```\nUnlocked Chapters\n{row}```", parse_mode=ParseMode.MARKDOWN)
+        await update.message.reply_text(f"📘 *Unlocked Chapters*\n{row}", parse_mode=ParseMode.MARKDOWN)
     except Exception as e:
         await update.message.reply_text(f"❌ Error: {e}")
 
