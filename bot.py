@@ -76,14 +76,18 @@ async def monitor_buys(app):
             print("Buy monitor error:", e)
         await asyncio.sleep(15)
 
-# Init bot
-app = ApplicationBuilder().token(BOT_TOKEN).build()
-app.add_handler(CommandHandler("price", lambda u, c: None))  # Platzhalter für spätere Befehle
-
 async def on_startup(app):
     asyncio.create_task(monitor_buys(app))
 
-app.post_init(on_startup)
+# Init bot
+app = (
+    ApplicationBuilder()
+    .token(BOT_TOKEN)
+    .post_init(on_startup)
+    .build()
+)
+
+app.add_handler(CommandHandler("price", lambda u, c: None))  # Platzhalter für spätere Befehle
 
 if __name__ == "__main__":
     print("Bot is polling...")
