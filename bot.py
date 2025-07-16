@@ -47,15 +47,15 @@ async def wallet(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not context.args:
         return await update.message.reply_text("⚠️ Usage: /wallet <0x...>")
     address = context.args[0].lower()
-    url = f"https://explorer-pepu-v2-mainnet-0.t.conduit.xyz/api/v2/addresses/{address}/tokens"
+    url = f"https://explorer-pepu-v2-mainnet-0.t.conduit.xyz/api/v2/addresses/{address}/token-balances"
     try:
         async with httpx.AsyncClient(verify=False) as client:
             r = await client.get(url)
             r.raise_for_status()
-            tokens = r.json().get("items", [])
+            balances = r.json()
 
         for token_address, token_name in [(VCPEPU, "VCPEPU"), (VCPX, "VCPX")]:
-            match = next((item for item in tokens if item.get("token", {}).get("contract_address", "").lower() == token_address.lower()), None)
+            match = next((item for item in balances if item.get("token", {}).get("contract_address", "").lower() == token_address.lower()), None)
             amount = int(match.get("balance", 0)) / 1e18 if match else 0
             short = address[:6] + "..." + address[-4:]
             await update.message.reply_text(
