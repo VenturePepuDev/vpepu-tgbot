@@ -33,20 +33,24 @@ async def price(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         for name, addr in tokens.items():
             price = float(prices.get(addr, 0))
-            fdv = float(marketcaps.get(addr, 0))
+            mcap = float(marketcaps.get(addr, 0))
             vol = float(volumes.get(addr, 0))
             change = float(changes.get(addr, 0))
 
             block = (
-                f"```\n{name}\n"
-                f"USD:        ${price:.9f}\n"
-                f"FDV:        ${fdv:,.2f}\n"
-                f"Vol (24h):  ${vol:,.2f}\n"
-                f"Change:     {change:.2f}%\n```"
+                f"```\n┌──── {name} Price ────┐\n"
+                f"│ USD:        ${price:.9f}\n"
+                f"│ Marketcap:  ${mcap:,.2f}\n"
+                f"│ Vol (24h):  ${vol:,.2f}\n"
+                f"│ Change:     {change:.2f}%\n"
+                f"└─────────────────────┘\n```"
             )
-            links = f"[Geckoterminal]({GECKO_LINKS[name]}) | [Pepuswap](https://www.pepuswap.com) | [Explorer](https://www.pepuscan.com)"
-            await update.message.reply_text(block, parse_mode=ParseMode.MARKDOWN)
-            await update.message.reply_text(links, parse_mode=ParseMode.MARKDOWN)
+            links = (
+                f"[Geckoterminal]({GECKO_LINKS[name]}) | "
+                f"[Pepuswap](https://www.pepuswap.com/) | "
+                f"[Explorer](https://www.pepuscan.com/)"
+            )
+            await update.message.reply_text(block + "\n" + links, parse_mode=ParseMode.MARKDOWN)
 
     except Exception as e:
         await update.message.reply_text(f"❌ Error fetching price: {e}")
@@ -69,7 +73,11 @@ async def wallet(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 balance = int(token.get("balance", "0")) / (10 ** int(token.get("decimals", "18")))
                 short = address[:6] + "..." + address[-4:]
                 msg = (
-                    f"```\nWallet Check\nToken:     {symbol}\nAddress:   {short}\nBalance:   {balance:,.2f}\n```"
+                    f"```\n┌── Wallet Check ──┐\n"
+                    f"│ Token:   {symbol}\n"
+                    f"│ Address: {short}\n"
+                    f"│ Balance: {balance:,.2f}\n"
+                    f"└──────────────────┘\n```"
                 )
                 await update.message.reply_text(msg, parse_mode=ParseMode.MARKDOWN)
 
@@ -78,10 +86,10 @@ async def wallet(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def ca(update: Update, context: ContextTypes.DEFAULT_TYPE):
     msg = (
-        f"```\nVCPEPU Contract\n{VCPEPU}\n```\n"
-        f"[Link](https://pepuscan.com/address/{VCPEPU})\n\n"
-        f"```\nVCPX Contract\n{VCPX}\n```\n"
-        f"[Link](https://pepuscan.com/address/{VCPX})"
+        f"```\nVCPEPU Contract\n{VCPEPU}\n```
+[Explorer](https://pepuscan.com/address/{VCPEPU})\n\n"
+        f"```\nVCPX Contract\n{VCPX}\n```
+[Explorer](https://pepuscan.com/address/{VCPX})"
     )
     await update.message.reply_text(msg, parse_mode=ParseMode.MARKDOWN)
 
