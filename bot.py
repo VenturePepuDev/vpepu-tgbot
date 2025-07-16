@@ -54,9 +54,11 @@ async def wallet(update: Update, context: ContextTypes.DEFAULT_TYPE):
             r.raise_for_status()
             balances = r.json()
 
-        for token_address, token_name in [(VCPEPU, "VCPEPU"), (VCPX, "VCPX")]:
-            match = next((item for item in balances if item.get("token", {}).get("contract_address", "").lower() == token_address.lower()), None)
-            amount = int(match.get("balance", 0)) / 1e18 if match else 0
+        filtered_tokens = [t for t in balances if t.get("token", {}).get("contract_address", "").lower() in [VCPEPU.lower(), VCPX.lower()]]
+
+        for token in filtered_tokens:
+            token_name = "VCPEPU" if token["token"]["contract_address"].lower() == VCPEPU.lower() else "VCPX"
+            amount = float(token.get("balance", "0")) / 1e18
             short = address[:6] + "..." + address[-4:]
             await update.message.reply_text(
                 f"👛 Wallet Check\nToken ¦ {token_name}\nAddress ¦ {short}\nBalance ¦ {amount:,.2f}"
